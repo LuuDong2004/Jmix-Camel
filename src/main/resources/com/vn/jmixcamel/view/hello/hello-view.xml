@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://helloView.title">
+    <layout>
+        <textField id="nameField" label="Name"/>
+        <button id="callCamelBtn" text="Call Camel"/>
+        <textArea id="resultArea" label="Result" readOnly="true"/>
+    </layout>
+</view>

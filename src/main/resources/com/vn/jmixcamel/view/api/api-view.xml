@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://apiView.title">
+
+        <layout classNames="p-m" spacing="true" width="100%">
+
+            <comboBox id="methodField"
+                      label="HTTP Method"
+                      width="20em"/>
+
+            <textField id="urlField"
+                       label="URL Template"
+                       width="100%"/>
+
+            <textField id="userIdField"
+                       label="User ID"
+                       width="20em"/>
+
+            <button id="callApiBtn"
+                    text="Call API"/>
+
+            <textArea id="resultArea"
+                      label="Result"
+                      width="100%"
+                      height="20em"
+                      readOnly="true"/>
+        </layout>
+</view>

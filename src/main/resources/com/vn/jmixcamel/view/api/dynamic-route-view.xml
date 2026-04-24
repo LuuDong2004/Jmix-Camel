@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<view xmlns="http://jmix.io/schema/flowui/view"
+      title="msg://dynamicRouteView.title">
+    <layout classNames="p-m" spacing="true" width="100%">
+
+        <textField id="routeIdField"
+                   label="Route ID"
+                   width="30em"/>
+
+        <comboBox id="dslTypeField"
+                  label="DSL Type"
+                  width="15em"/>
+
+        <textArea id="routeContentArea"
+                  label="Route XML/YAML"
+                  width="100%"
+                  height="18em"/>
+
+        <button id="deployBtn"
+                text="Deploy Route"/>
+
+        <textField id="executeBodyField"
+                   label="Execute Body"
+                   width="30em"/>
+
+        <button id="executeBtn"
+                text="Execute Route"/>
+
+        <textArea id="resultArea"
+                  label="Result"
+                  width="100%"
+                  height="18em"
+                  readOnly="true"/>
+
+    </layout>
+</view>
