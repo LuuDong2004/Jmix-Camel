@@ -42,6 +42,9 @@ dependencies {
     implementation 'org.apache.camel:camel-xml-io-dsl:4.10.0'
     implementation 'org.apache.camel:camel-yaml-dsl:4.10.0'
 
+    //postgresql
+    implementation 'org.postgresql:postgresql:42.7.3'
+
     runtimeOnly 'org.hsqldb:hsqldb'
 
     testImplementation('org.springframework.boot:spring-boot-starter-test') {

@@ -6,6 +6,7 @@
         <item view="HelloView" title="msg://com.vn.jmixcamel.view.hello/helloView.title"/>
         <item view="ApiView" title="msg://com.vn.jmixcamel.view.api/apiView.title"/>
         <item view="DynamicRouteView" title="msg://com.vn.jmixcamel.view.api/dynamicRouteView.title"/>
+        <item view="DynamicExecuteView" title="msg://com.vn.jmixcamel.view.api/dynamicExecuteView.title"/>
     </menu>
 
 </menu-config>

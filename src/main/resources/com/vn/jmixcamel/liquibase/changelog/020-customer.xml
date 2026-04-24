@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="20-1" author="Jmix-Camel" context="!cuba">
+        <createTable tableName="CUSTOMER">
+            <column name="ID" type="${uuid.type}">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="VERSION" type="int">
+                <constraints nullable="false"/>
+            </column>
+            <column name="NAME" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="PHONE" type="varchar(64)"/>
+            <column name="EMAIL" type="varchar(255)"/>
+            <column name="SEGMENT" type="varchar(64)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="20-2" author="Jmix-Camel" context="!cuba">
+        <createIndex indexName="IDX_CUSTOMER__ON_NAME_PHONE" tableName="CUSTOMER">
+            <column name="NAME"/>
+            <column name="PHONE"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="20-3" author="Jmix-Camel" context="!cuba">
+        <insert tableName="CUSTOMER" dbms="postgresql, mssql, hsqldb">
+            <column name="ID" value="3a39d7e0-8b3e-4a64-8f1a-1a0b3e8f8001"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Leanne Graham"/>
+            <column name="PHONE" value="1-770-736-8031 x56442"/>
+            <column name="EMAIL" value="leanne@example.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+        <insert tableName="CUSTOMER" dbms="oracle, mysql, mariadb">
+            <column name="ID" value="3a39d7e08b3e4a648f1a1a0b3e8f8001"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Leanne Graham"/>
+            <column name="PHONE" value="1-770-736-8031 x56442"/>
+            <column name="EMAIL" value="leanne@example.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
