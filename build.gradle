@@ -36,6 +36,10 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    //yaml + xml config format
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml'
+
     //apche camel
     implementation 'org.apache.camel.springboot:camel-spring-boot-starter:4.10.0'
     implementation 'org.apache.camel.springboot:camel-http-starter:4.10.0'

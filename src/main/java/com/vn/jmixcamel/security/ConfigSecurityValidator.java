@@ -1,7 +1,7 @@
 package com.vn.jmixcamel.security;
 
 import com.vn.jmixcamel.dto.ApiConfig;
-import com.vn.jmixcamel.dto.DbLookupConfig;
+import com.vn.jmixcamel.dto.DbQueryConfig;
 import com.vn.jmixcamel.dto.ExecutionConfig;
 import org.springframework.stereotype.Component;
 
@@ -15,19 +15,6 @@ public class ConfigSecurityValidator {
 
     private static final Set<String> ALLOWED_URL_SCHEMES = Set.of("http", "https");
 
-    private static final Set<String> ALLOWED_LOOKUP_TYPES = Set.of(
-            "customer",
-            "order",
-            "product"
-    );
-
-    private static final Set<String> BLOCKED_HOSTS = Set.of(
-            "localhost",
-            "127.0.0.1",
-            "0.0.0.0",
-            "::1"
-    );
-
     private static final Set<String> BLOCKED_METHODS = Set.of(
             "TRACE",
             "CONNECT"
@@ -40,7 +27,7 @@ public class ConfigSecurityValidator {
             throw new IllegalArgumentException("config is required");
         }
         validateApi(config.getApi());
-        validateDbLookup(config.getDbLookup());
+        validateDbQuery(config.getDbQuery());
     }
 
     private void validateApi(ApiConfig api) {
@@ -80,30 +67,13 @@ public class ConfigSecurityValidator {
         if (host == null || host.isBlank()) {
             throw new IllegalArgumentException("config.api.url must have a host");
         }
-        if (BLOCKED_HOSTS.contains(host.toLowerCase())) {
-            throw new IllegalArgumentException("Host not allowed: " + host);
-        }
-        if (host.startsWith("169.254.") || host.startsWith("10.") || host.startsWith("192.168.")) {
-            throw new IllegalArgumentException("Private/internal host not allowed: " + host);
-        }
     }
 
-    private void validateDbLookup(DbLookupConfig dbLookup) {
-        if (dbLookup == null) {
-            return;
+    private void validateDbQuery(DbQueryConfig dbQuery) {
+        if (dbQuery == null) return;
+        if (dbQuery.getEntity() == null || dbQuery.getEntity().isBlank()) {
+            throw new IllegalArgumentException("config.dbQuery.entity is required");
         }
-        String type = dbLookup.getType();
-        if (type == null || type.isBlank()) {
-            throw new IllegalArgumentException("config.dbLookup.type is required");
-        }
-        if (!ALLOWED_LOOKUP_TYPES.contains(type.toLowerCase())) {
-            throw new IllegalArgumentException(
-                    "Lookup type not allowed: " + type +
-                            ". Allowed: " + ALLOWED_LOOKUP_TYPES
-            );
-        }
-        if (dbLookup.getBy() == null || dbLookup.getBy().isEmpty()) {
-            throw new IllegalArgumentException("config.dbLookup.by is required");
-        }
+        // Entity whitelist + field whitelist enforced by QueryExecutor / QueryableEntityRegistry
     }
 }

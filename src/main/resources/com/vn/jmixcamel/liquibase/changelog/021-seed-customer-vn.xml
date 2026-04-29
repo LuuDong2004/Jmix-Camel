@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="21-seed-vn" author="Jmix-Camel" context="!cuba">
+
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000001"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Nguyễn Văn An"/>
+            <column name="PHONE" value="0901234501"/>
+            <column name="EMAIL" value="nguyen.van.an@gmail.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000002"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Trần Thị Bình"/>
+            <column name="PHONE" value="0901234502"/>
+            <column name="EMAIL" value="tran.thi.binh@gmail.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000003"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Lê Minh Châu"/>
+            <column name="PHONE" value="0901234503"/>
+            <column name="EMAIL" value="le.minh.chau@gmail.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000004"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Phạm Hoàng Dũng"/>
+            <column name="PHONE" value="0901234504"/>
+            <column name="EMAIL" value="pham.hoang.dung@gmail.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000005"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Hoàng Thị Hạnh"/>
+            <column name="PHONE" value="0901234505"/>
+            <column name="EMAIL" value="hoang.thi.hanh@gmail.com"/>
+            <column name="SEGMENT" value="VIP"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000006"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Vũ Quốc Huy"/>
+            <column name="PHONE" value="0901234506"/>
+            <column name="EMAIL" value="vu.quoc.huy@gmail.com"/>
+            <column name="SEGMENT" value="GOLD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000007"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Đặng Thu Hà"/>
+            <column name="PHONE" value="0901234507"/>
+            <column name="EMAIL" value="dang.thu.ha@gmail.com"/>
+            <column name="SEGMENT" value="GOLD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000008"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Bùi Gia Khánh"/>
+            <column name="PHONE" value="0901234508"/>
+            <column name="EMAIL" value="bui.gia.khanh@gmail.com"/>
+            <column name="SEGMENT" value="GOLD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000009"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Đỗ Ngọc Linh"/>
+            <column name="PHONE" value="0901234509"/>
+            <column name="EMAIL" value="do.ngoc.linh@gmail.com"/>
+            <column name="SEGMENT" value="GOLD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000010"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Ngô Thanh Long"/>
+            <column name="PHONE" value="0901234510"/>
+            <column name="EMAIL" value="ngo.thanh.long@gmail.com"/>
+            <column name="SEGMENT" value="GOLD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000011"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Dương Mỹ Ngọc"/>
+            <column name="PHONE" value="0901234511"/>
+            <column name="EMAIL" value="duong.my.ngoc@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000012"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Lý Thành Nam"/>
+            <column name="PHONE" value="0901234512"/>
+            <column name="EMAIL" value="ly.thanh.nam@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000013"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Mai Phương Nhi"/>
+            <column name="PHONE" value="0901234513"/>
+            <column name="EMAIL" value="mai.phuong.nhi@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000014"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Phan Đức Phúc"/>
+            <column name="PHONE" value="0901234514"/>
+            <column name="EMAIL" value="phan.duc.phuc@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000015"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Tạ Minh Quân"/>
+            <column name="PHONE" value="0901234515"/>
+            <column name="EMAIL" value="ta.minh.quan@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000016"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Hồ Bảo Trâm"/>
+            <column name="PHONE" value="0901234516"/>
+            <column name="EMAIL" value="ho.bao.tram@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000017"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Cao Anh Tú"/>
+            <column name="PHONE" value="0901234517"/>
+            <column name="EMAIL" value="cao.anh.tu@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000018"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Đinh Hải Yến"/>
+            <column name="PHONE" value="0901234518"/>
+            <column name="EMAIL" value="dinh.hai.yen@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000019"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Trương Gia Bảo"/>
+            <column name="PHONE" value="0901234519"/>
+            <column name="EMAIL" value="truong.gia.bao@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000020"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Huỳnh Kim Chi"/>
+            <column name="PHONE" value="0901234520"/>
+            <column name="EMAIL" value="huynh.kim.chi@gmail.com"/>
+            <column name="SEGMENT" value="SILVER"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000021"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Lâm Nhật Minh"/>
+            <column name="PHONE" value="0901234521"/>
+            <column name="EMAIL" value="lam.nhat.minh@gmail.com"/>
+            <column name="SEGMENT" value="STANDARD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000022"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Kiều Thanh Mai"/>
+            <column name="PHONE" value="0901234522"/>
+            <column name="EMAIL" value="kieu.thanh.mai@gmail.com"/>
+            <column name="SEGMENT" value="STANDARD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000023"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Châu Việt Anh"/>
+            <column name="PHONE" value="0901234523"/>
+            <column name="EMAIL" value="chau.viet.anh@gmail.com"/>
+            <column name="SEGMENT" value="STANDARD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000024"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Tô Khánh Ly"/>
+            <column name="PHONE" value="0901234524"/>
+            <column name="EMAIL" value="to.khanh.ly@gmail.com"/>
+            <column name="SEGMENT" value="STANDARD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000025"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Triệu Đức Anh"/>
+            <column name="PHONE" value="0901234525"/>
+            <column name="EMAIL" value="trieu.duc.anh@gmail.com"/>
+            <column name="SEGMENT" value="STANDARD"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000026"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Nguyễn Thảo Vy"/>
+            <column name="PHONE" value="0901234526"/>
+            <column name="EMAIL" value="nguyen.thao.vy@gmail.com"/>
+            <column name="SEGMENT" value="NEW"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000027"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Trần Gia Hưng"/>
+            <column name="PHONE" value="0901234527"/>
+            <column name="EMAIL" value="tran.gia.hung@gmail.com"/>
+            <column name="SEGMENT" value="NEW"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000028"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Lê Bảo Ngân"/>
+            <column name="PHONE" value="0901234528"/>
+            <column name="EMAIL" value="le.bao.ngan@gmail.com"/>
+            <column name="SEGMENT" value="NEW"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000029"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Phạm Tuấn Kiệt"/>
+            <column name="PHONE" value="0901234529"/>
+            <column name="EMAIL" value="pham.tuan.kiet@gmail.com"/>
+            <column name="SEGMENT" value="NEW"/>
+        </insert>
+        <insert tableName="CUSTOMER">
+            <column name="ID" value="a0000000-0000-0000-0000-000000000030"/>
+            <column name="VERSION" value="1"/>
+            <column name="NAME" value="Võ Minh Khang"/>
+            <column name="PHONE" value="0901234530"/>
+            <column name="EMAIL" value="vo.minh.khang@gmail.com"/>
+            <column name="SEGMENT" value="NEW"/>
+        </insert>
+
+    </changeSet>
+
+</databaseChangeLog>

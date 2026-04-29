@@ -3,26 +3,87 @@
       title="msg://dynamicExecuteView.title">
     <layout classNames="p-m" spacing="true" width="100%">
 
-        <h3 text="Dynamic API Execution Engine"/>
-        <span text="Send JSON config → call external API → extract fields → DB lookup → return enriched result"/>
+<!--        <h3 text="Động cơ thực thi API động"/>-->
+        <span text="Nhập cấu hình qua form → sinh Camel YAML/XML DSL → thực thi"/>
 
         <hbox spacing="true">
-            <button id="executeBtn" text="Execute" themeNames="primary"/>
-            <button id="sampleBtn" text="Load Sample"/>
+            <button id="executeBtn" text="Thực thi" themeNames="primary"/>
+            <button id="previewYamlBtn" text="Xem YAML"/>
+            <button id="previewXmlBtn" text="Xem XML"/>
+            <button id="loadSampleBtn" text="Nạp mẫu"/>
+            <button id="resetBtn" text="Xoá form"/>
         </hbox>
 
-        <textArea id="configArea"
-                  label="Config (JSON)"
-                  width="100%"
-                  height="24em"
-                  themeNames="small"/>
+        <split orientation="HORIZONTAL" width="100%" minHeight="50em" splitterPosition="62">
 
-        <textArea id="resultArea"
-                  label="Result"
-                  width="100%"
-                  height="24em"
-                  readOnly="true"
-                  themeNames="small"/>
+            <vbox width="100%" spacing="true">
+
+                <details summaryText="1. Input variables" opened="true">
+                    <vbox id="inputContainer" spacing="true" width="200%"/>
+                </details>
+
+                <details summaryText="2. API call" opened="true">
+                    <hbox width="100%" spacing="true" alignItems="END">
+                        <comboBox id="apiMethodField" label="Method" width="200%"/>
+                        <textField id="apiUrlField" label="URL"
+                                   placeholder="http://localhost:8081/api/users/${userId}"
+                                   width="200%" />
+                    </hbox>
+                    <h4 text="Headers"/>
+                    <vbox id="headersContainer" spacing="true" width="100%"/>
+                    <textArea id="apiBodyField" label="Body (JSON, dùng cho POST/PUT/PATCH)"
+                              width="100%" height="6em"/>
+                </details>
+
+                <details summaryText="3. Extract (JSONPath từ response API)" opened="true">
+                    <vbox id="extractContainer" spacing="true" width="100%"/>
+                </details>
+
+                <details summaryText="4. DB query" opened="true">
+                    <h4 text="SQL nhanh (paste SELECT để tự fill)"/>
+                    <textArea id="sqlInputField"
+                              placeholder="SELECT * FROM customer WHERE phone = '${extracted.phone}' ORDER BY name ASC LIMIT 1"
+                              width="100%" height="5em"/>
+                    <hbox spacing="true">
+                        <button id="parseSqlBtn" text="Parse SQL → Form"/>
+                    </hbox>
+
+                    <formLayout width="100%">
+                        <responsiveSteps>
+                            <responsiveStep minWidth="0" columns="2"/>
+                            <responsiveStep minWidth="700px" columns="4"/>
+                        </responsiveSteps>
+                        <comboBox id="dbEntityField" label="Entity" width="100%"/>
+                        <textField id="dbOrderByField" label="Order by" width="100%"/>
+                        <comboBox id="dbOrderDirField" label="Direction" width="100%"/>
+                        <integerField id="dbLimitField" label="Limit" width="100%"/>
+                    </formLayout>
+                    <h4 text="Filters"/>
+                    <vbox id="filtersContainer" spacing="true" width="100%"/>
+                </details>
+
+                <details summaryText="5. Response template (key → ${expression})" opened="true">
+                    <vbox id="responseContainer" spacing="true" width="100%"/>
+                </details>
+
+            </vbox>
+
+            <vbox width="100%" spacing="true">
+                <textArea id="previewArea"
+                          label="Preview (YAML/XML)"
+                          width="100%"
+                          height="40em"
+                          readOnly="true"
+                          themeNames="small"/>
+                <textArea id="resultArea"
+                          label="Kết quả"
+                          width="100%"
+                          height="20em"
+                          readOnly="true"
+                          themeNames="small"/>
+            </vbox>
+
+        </split>
 
     </layout>
 </view>

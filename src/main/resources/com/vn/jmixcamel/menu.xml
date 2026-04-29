@@ -3,9 +3,6 @@
 
     <menu id="application" title="msg://com.vn.jmixcamel/menu.application.title" opened="true">
         <item view="User.list" title="msg://com.vn.jmixcamel.view.user/UserListView.title"/>
-        <item view="HelloView" title="msg://com.vn.jmixcamel.view.hello/helloView.title"/>
-        <item view="ApiView" title="msg://com.vn.jmixcamel.view.api/apiView.title"/>
-        <item view="DynamicRouteView" title="msg://com.vn.jmixcamel.view.api/dynamicRouteView.title"/>
         <item view="DynamicExecuteView" title="msg://com.vn.jmixcamel.view.api/dynamicExecuteView.title"/>
     </menu>
 

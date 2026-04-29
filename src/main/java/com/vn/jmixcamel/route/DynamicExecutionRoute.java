@@ -1,13 +1,16 @@
 package com.vn.jmixcamel.route;
 
+import com.vn.jmixcamel.dto.ExecutionConfig;
 import com.vn.jmixcamel.dto.ExecutionResult;
 import com.vn.jmixcamel.processor.ApiCallerProcessor;
-import com.vn.jmixcamel.processor.DynamicDbLookupProcessor;
+import com.vn.jmixcamel.processor.DynamicDbQueryProcessor;
 import com.vn.jmixcamel.processor.DynamicExtractProcessor;
+import com.vn.jmixcamel.service.ResponseTemplateResolver;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @Component
@@ -17,16 +20,19 @@ public class DynamicExecutionRoute extends RouteBuilder {
 
     private final ApiCallerProcessor apiCallerProcessor;
     private final DynamicExtractProcessor dynamicExtractProcessor;
-    private final DynamicDbLookupProcessor dynamicDbLookupProcessor;
+    private final DynamicDbQueryProcessor dynamicDbQueryProcessor;
+    private final ResponseTemplateResolver responseTemplateResolver;
 
     public DynamicExecutionRoute(
             ApiCallerProcessor apiCallerProcessor,
             DynamicExtractProcessor dynamicExtractProcessor,
-            DynamicDbLookupProcessor dynamicDbLookupProcessor
+            DynamicDbQueryProcessor dynamicDbQueryProcessor,
+            ResponseTemplateResolver responseTemplateResolver
     ) {
         this.apiCallerProcessor = apiCallerProcessor;
         this.dynamicExtractProcessor = dynamicExtractProcessor;
-        this.dynamicDbLookupProcessor = dynamicDbLookupProcessor;
+        this.dynamicDbQueryProcessor = dynamicDbQueryProcessor;
+        this.responseTemplateResolver = responseTemplateResolver;
     }
 
     @Override
@@ -64,14 +70,26 @@ public class DynamicExecutionRoute extends RouteBuilder {
                 .log("API response received (${body.length()} chars)")
                 .setProperty("stage", constant("EXTRACT_FAILED"))
                 .process(dynamicExtractProcessor)
-                .setProperty("stage", constant("DB_LOOKUP_FAILED"))
-                .process(dynamicDbLookupProcessor)
+                .setProperty("stage", constant("DB_QUERY_FAILED"))
+                .process(dynamicDbQueryProcessor)
                 .setProperty("stage", constant("OK"))
                 .process(exchange -> {
                     @SuppressWarnings("unchecked")
                     Map<String, Object> extracted = exchange.getProperty("extracted", Map.class);
                     Object dbResult = exchange.getProperty("dbResult");
-                    exchange.getIn().setBody(new ExecutionResult(extracted, dbResult));
+                    ExecutionConfig config = exchange.getProperty("execConfig", ExecutionConfig.class);
+
+                    Object body;
+                    if (config != null && config.getResponse() != null) {
+                        Map<String, Object> scope = new HashMap<>();
+                        scope.put("input", config.getInput());
+                        scope.put("extracted", extracted);
+                        scope.put("dbResult", dbResult);
+                        body = responseTemplateResolver.resolve(config.getResponse(), scope);
+                    } else {
+                        body = new ExecutionResult(extracted, dbResult);
+                    }
+                    exchange.getIn().setBody(body);
                 });
     }
 
