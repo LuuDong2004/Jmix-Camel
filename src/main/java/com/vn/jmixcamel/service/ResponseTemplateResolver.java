@@ -54,15 +54,24 @@ public class ResponseTemplateResolver {
         return sb.toString();
     }
 
-    private Object lookup(String path, Map<String, Object> scope) {
+    public Object lookup(String path, Map<String, Object> scope) {
         if (path == null || path.isBlank()) return null;
         String[] parts = path.split("\\.");
         if (parts.length == 0) return null;
-        Object current = scope.get(parts[0]);
+        // 'private' is the FE namespace name; runtime stores it under 'object'.
+        String firstSeg = "private".equals(parts[0]) ? "object" : parts[0];
+        Object current = scope.get(firstSeg);
         for (int i = 1; i < parts.length; i++) {
             if (current == null) return null;
             if (current instanceof Map<?, ?> map) {
                 current = map.get(parts[i]);
+            } else if (current instanceof List<?> list) {
+                try {
+                    int idx = Integer.parseInt(parts[i]);
+                    current = (idx >= 0 && idx < list.size()) ? list.get(idx) : null;
+                } catch (NumberFormatException e) {
+                    return null;
+                }
             } else {
                 return null;
             }
