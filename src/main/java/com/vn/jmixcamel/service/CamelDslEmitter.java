@@ -75,6 +75,25 @@ public class CamelDslEmitter {
                 sb.append("        <log id=\"").append(ids.next("log"))
                   .append("\" message=\"EXTRACT: ").append(xmlEscape(oneLine)).append("\"/>\n");
             }
+            case "TRANSFORM" -> {
+                String mode = String.valueOf(data.getOrDefault("mode", "mapping"));
+                String descriptor = "plugin".equals(mode)
+                        ? "plugin: " + extractPluginId(data)
+                        : "mapping: " + ((String) data.getOrDefault("code", "")).replaceAll("\\s+", " ").trim();
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"TRANSFORM ").append(xmlEscape(descriptor)).append("\"/>\n");
+                sb.append("        <to id=\"").append(ids.next("to"))
+                  .append("\" uri=\"bean:transformRunner\"/>\n");
+            }
+            case "PLUGIN_CALL" -> {
+                String pc = String.valueOf(data.getOrDefault("pluginCode", "<unset>"));
+                String ec = String.valueOf(data.getOrDefault("extensionCode", "<unset>"));
+                String ok = String.valueOf(data.getOrDefault("outputKey", "<unset>"));
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"PLUGIN_CALL ").append(xmlEscape(pc + ":" + ec + " → output." + ok)).append("\"/>\n");
+                sb.append("        <to id=\"").append(ids.next("to"))
+                  .append("\" uri=\"bean:pluginCallRunner\"/>\n");
+            }
             case "DB_QUERY" -> {
                 sb.append("        <log id=\"").append(ids.next("log"))
                   .append("\" message=\"DB ").append(xmlEscape(buildDbDescriptor(data))).append("\"/>\n");
@@ -122,6 +141,29 @@ public class CamelDslEmitter {
                 sb.append("            id: ").append(ids.next("log")).append('\n');
                 sb.append("            message: ").append(yamlString("EXTRACT: " + oneLine)).append('\n');
             }
+            case "TRANSFORM" -> {
+                String mode = String.valueOf(data.getOrDefault("mode", "mapping"));
+                String descriptor = "plugin".equals(mode)
+                        ? "plugin: " + extractPluginId(data)
+                        : "mapping: " + ((String) data.getOrDefault("code", "")).replaceAll("\\s+", " ").trim();
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("TRANSFORM " + descriptor)).append('\n');
+                sb.append("        - to:\n");
+                sb.append("            id: ").append(ids.next("to")).append('\n');
+                sb.append("            uri: bean:transformRunner\n");
+            }
+            case "PLUGIN_CALL" -> {
+                String pc = String.valueOf(data.getOrDefault("pluginCode", "<unset>"));
+                String ec = String.valueOf(data.getOrDefault("extensionCode", "<unset>"));
+                String ok = String.valueOf(data.getOrDefault("outputKey", "<unset>"));
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("PLUGIN_CALL " + pc + ":" + ec + " → output." + ok)).append('\n');
+                sb.append("        - to:\n");
+                sb.append("            id: ").append(ids.next("to")).append('\n');
+                sb.append("            uri: bean:pluginCallRunner\n");
+            }
             case "DB_QUERY" -> {
                 sb.append("        - log:\n");
                 sb.append("            id: ").append(ids.next("log")).append('\n');
@@ -146,6 +188,15 @@ public class CamelDslEmitter {
                 sb.append("            message: ").append(yamlString("unknown: " + type)).append('\n');
             }
         }
+    }
+
+    private String extractPluginId(Map<String, Object> data) {
+        Object p = data.get("plugin");
+        if (p instanceof Map<?, ?> m) {
+            Object id = m.get("id");
+            if (id instanceof String s && !s.isBlank()) return s;
+        }
+        return "<unset>";
     }
 
     private String buildDbDescriptor(Map<String, Object> data) {

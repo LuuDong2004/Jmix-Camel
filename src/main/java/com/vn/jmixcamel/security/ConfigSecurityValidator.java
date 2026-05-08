@@ -46,8 +46,50 @@ public class ConfigSecurityValidator {
         switch (type) {
             case "REST_CALL" -> validateRestCall(node.getId(), data);
             case "DB_QUERY"  -> validateDbQuery(node.getId(), data);
+            case "TRANSFORM" -> validateTransform(node.getId(), data);
+            case "PLUGIN_CALL" -> validatePluginCall(node.getId(), data);
             case "EXTRACT", "RESPONSE" -> { /* no extra checks */ }
             default -> throw new IllegalArgumentException("Unknown node type: " + type);
+        }
+    }
+
+    private void validatePluginCall(String nodeId, Map<String, Object> data) {
+        String pluginCode = (String) data.get("pluginCode");
+        if (pluginCode == null || pluginCode.isBlank()) {
+            throw new IllegalArgumentException(nodeId + ": PLUGIN_CALL requires data.pluginCode");
+        }
+        String extensionCode = (String) data.get("extensionCode");
+        if (extensionCode == null || extensionCode.isBlank()) {
+            throw new IllegalArgumentException(nodeId + ": PLUGIN_CALL requires data.extensionCode");
+        }
+        String outputKey = (String) data.get("outputKey");
+        if (outputKey == null || outputKey.isBlank()) {
+            throw new IllegalArgumentException(nodeId + ": PLUGIN_CALL requires data.outputKey");
+        }
+        if (!outputKey.matches("[a-zA-Z_][\\w.]*")) {
+            throw new IllegalArgumentException(nodeId + ": outputKey contains invalid characters: " + outputKey);
+        }
+        Object input = data.get("inputMapping");
+        if (input != null && !(input instanceof Map<?, ?>)) {
+            throw new IllegalArgumentException(nodeId + ": inputMapping must be an object (got " + input.getClass().getSimpleName() + ")");
+        }
+    }
+
+    private void validateTransform(String nodeId, Map<String, Object> data) {
+        String mode = (String) data.getOrDefault("mode", "mapping");
+        if (!"mapping".equals(mode) && !"plugin".equals(mode)) {
+            throw new IllegalArgumentException(nodeId + ": TRANSFORM mode must be 'mapping' or 'plugin', got: " + mode);
+        }
+        if ("plugin".equals(mode)) {
+            Object pluginObj = data.get("plugin");
+            if (!(pluginObj instanceof Map<?, ?> pluginMap)) {
+                throw new IllegalArgumentException(nodeId + ": TRANSFORM mode=plugin requires data.plugin object");
+            }
+            Object pid = pluginMap.get("id");
+            if (!(pid instanceof String s) || s.isBlank()) {
+                throw new IllegalArgumentException(nodeId + ": TRANSFORM mode=plugin requires data.plugin.id");
+            }
+            // config schema validation happens in TransformExecutor against plugin.configSchema()
         }
     }
 

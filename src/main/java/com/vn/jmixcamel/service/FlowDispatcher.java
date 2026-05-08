@@ -6,7 +6,9 @@ import com.vn.jmixcamel.dto.FlowEdge;
 import com.vn.jmixcamel.dto.FlowNode;
 import com.vn.jmixcamel.runner.DbQueryRunner;
 import com.vn.jmixcamel.runner.ExtractRunner;
+import com.vn.jmixcamel.runner.PluginCallRunner;
 import com.vn.jmixcamel.runner.RestCallRunner;
+import com.vn.jmixcamel.runner.TransformRunner;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
@@ -32,15 +34,21 @@ public class FlowDispatcher implements Processor {
     private final ExtractRunner extractRunner;
     private final DbQueryRunner dbQueryRunner;
     private final ResponseTemplateResolver templateResolver;
+    private final TransformRunner transformRunner;
+    private final PluginCallRunner pluginCallRunner;
 
     public FlowDispatcher(RestCallRunner restCallRunner,
                           ExtractRunner extractRunner,
                           DbQueryRunner dbQueryRunner,
-                          ResponseTemplateResolver templateResolver) {
+                          ResponseTemplateResolver templateResolver,
+                          TransformRunner transformRunner,
+                          PluginCallRunner pluginCallRunner) {
         this.restCallRunner = restCallRunner;
         this.extractRunner = extractRunner;
         this.dbQueryRunner = dbQueryRunner;
         this.templateResolver = templateResolver;
+        this.transformRunner = transformRunner;
+        this.pluginCallRunner = pluginCallRunner;
     }
 
     @Override
@@ -87,6 +95,8 @@ public class FlowDispatcher implements Processor {
                     }
                 }
                 case "EXTRACT"   -> extractRunner.run(node.getData(), scope);
+                case "TRANSFORM" -> transformRunner.run(node.getId(), node.getData(), scope);
+                case "PLUGIN_CALL" -> pluginCallRunner.run(node.getId(), node.getData(), scope);
                 case "DB_QUERY"  -> {
                     Object result = dbQueryRunner.run(node.getData(), scope);
                     String shape = (String) (node.getData() == null ? null : node.getData().get("resultShape"));

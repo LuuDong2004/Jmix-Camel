@@ -51,6 +51,11 @@ dependencies {
 
     runtimeOnly 'org.hsqldb:hsqldb'
 
+    // transform plugin SPI + PF4J runtime
+    implementation project(':transform-spi')
+    implementation 'org.pf4j:pf4j:3.12.0'
+    implementation 'com.networknt:json-schema-validator:1.5.1'
+
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
     }

@@ -56,7 +56,7 @@ public class JmixCamelSecurityConfiguration {
     @Bean
     @Order(JmixSecurityFilterChainOrder.CUSTOM)
     SecurityFilterChain publicFilterChain(HttpSecurity http) throws Exception {
-        http.securityMatcher("/public/**", "/api/dynamic/**")
+        http.securityMatcher("/public/**", "/api/dynamic/**", "/api/transforms/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize ->
