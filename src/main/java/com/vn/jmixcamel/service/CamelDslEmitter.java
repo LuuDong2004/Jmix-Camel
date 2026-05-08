@@ -1,28 +1,17 @@
 package com.vn.jmixcamel.service;
 
-import com.vn.jmixcamel.dto.ApiConfig;
-import com.vn.jmixcamel.dto.DbQueryConfig;
 import com.vn.jmixcamel.dto.ExecutionConfig;
-import com.vn.jmixcamel.dto.QueryFilter;
+import com.vn.jmixcamel.dto.FlowEdge;
+import com.vn.jmixcamel.dto.FlowNode;
 import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 /**
- * Emits a Camel route DSL representation of an ExecutionConfig in formats Kaoto can render
- * (XML Spring schema or YAML DSL). The emitted route is a visualization of the same flow
- * the runtime executes via DynamicExecutionService — the runtime does not parse this DSL.
- *
- *   from(direct:dynamic)
- *     -> setHeader(input.*)
- *     -> setHeader(api.headers.*)
- *     -> setBody(api.body)?
- *     -> toD(api.url)
- *     -> setProperty(extracted.*)+jsonpath
- *     -> to(bean:dynamicDbQueryProcessor)?
- *     -> to(bean:responseTemplateResolver)?
+ * Renders an ExecutionConfig graph into a Camel-DSL-flavored YAML/XML.
+ * Output is for visualization only (Kaoto preview); it isn't fed back into the runtime.
  */
 @Component
 public class CamelDslEmitter {
@@ -32,65 +21,12 @@ public class CamelDslEmitter {
     public String toXml(ExecutionConfig cfg) {
         StringBuilder sb = new StringBuilder();
         IdGen ids = new IdGen();
-
         sb.append("<camel xmlns=\"http://camel.apache.org/schema/spring\">\n");
         sb.append("    <route id=\"dynamic-execution\">\n");
-        sb.append("        <from id=\"").append(ids.next("from"))
-          .append("\" uri=\"direct:dynamic\"/>\n");
+        sb.append("        <from id=\"").append(ids.next("from")).append("\" uri=\"direct:dynamic\"/>\n");
 
-        if (cfg.getInput() != null) {
-            for (Map.Entry<String, Object> e : cfg.getInput().entrySet()) {
-                emitSetHeaderXml(sb, ids, e.getKey(), valueToString(e.getValue()), false);
-            }
-        }
-
-        ApiConfig api = cfg.getApi();
-        if (api != null) {
-            if (api.getHeaders() != null) {
-                for (Map.Entry<String, String> e : api.getHeaders().entrySet()) {
-                    emitSetHeaderXml(sb, ids, e.getKey(), e.getValue(), true);
-                }
-            }
-            if (api.getBody() != null && !valueToString(api.getBody()).isBlank()) {
-                String body = valueToString(api.getBody());
-                sb.append("        <setBody id=\"").append(ids.next("setBody")).append("\">\n");
-                sb.append("            <").append(exprTag(body)).append('>')
-                  .append(xmlEscape(body))
-                  .append("</").append(exprTag(body)).append(">\n");
-                sb.append("        </setBody>\n");
-            }
-            if (api.getUrl() != null && !api.getUrl().isBlank()) {
-                String method = api.getMethod() == null ? "GET" : api.getMethod();
-                sb.append("        <setHeader id=\"").append(ids.next("setHeader"))
-                  .append("\" name=\"CamelHttpMethod\">\n")
-                  .append("            <constant>").append(xmlEscape(method))
-                  .append("</constant>\n        </setHeader>\n");
-                sb.append("        <toD id=\"").append(ids.next("toD"))
-                  .append("\" uri=\"").append(xmlEscape(api.getUrl())).append("\"/>\n");
-            }
-        }
-
-        if (cfg.getExtract() != null) {
-            for (Map.Entry<String, String> e : cfg.getExtract().entrySet()) {
-                sb.append("        <setProperty id=\"").append(ids.next("setProperty"))
-                  .append("\" name=\"extracted.").append(xmlEscape(e.getKey())).append("\">\n");
-                sb.append("            <jsonpath>").append(xmlEscape(e.getValue()))
-                  .append("</jsonpath>\n");
-                sb.append("        </setProperty>\n");
-            }
-        }
-
-        DbQueryConfig db = cfg.getDbQuery();
-        if (db != null && db.getEntity() != null && !db.getEntity().isBlank()) {
-            sb.append("        <log id=\"").append(ids.next("log"))
-              .append("\" message=\"DB query ").append(xmlEscape(buildDbDescriptor(db))).append("\"/>\n");
-            sb.append("        <to id=\"").append(ids.next("to"))
-              .append("\" uri=\"bean:dynamicDbQueryProcessor\"/>\n");
-        }
-
-        if (cfg.getResponse() != null) {
-            sb.append("        <to id=\"").append(ids.next("to"))
-              .append("\" uri=\"bean:responseTemplateResolver\"/>\n");
+        for (FlowNode n : topoSort(cfg)) {
+            emitNodeXml(sb, ids, n);
         }
 
         sb.append("    </route>\n");
@@ -101,7 +37,6 @@ public class CamelDslEmitter {
     public String toYaml(ExecutionConfig cfg) {
         StringBuilder sb = new StringBuilder();
         IdGen ids = new IdGen();
-
         sb.append("- route:\n");
         sb.append("    id: dynamic-execution\n");
         sb.append("    from:\n");
@@ -109,123 +44,225 @@ public class CamelDslEmitter {
         sb.append("      uri: direct:dynamic\n");
         sb.append("      steps:\n");
 
-        if (cfg.getInput() != null) {
-            for (Map.Entry<String, Object> e : cfg.getInput().entrySet()) {
-                emitSetHeaderYaml(sb, ids, e.getKey(), valueToString(e.getValue()), false);
-            }
+        for (FlowNode n : topoSort(cfg)) {
+            emitNodeYaml(sb, ids, n);
         }
 
-        ApiConfig api = cfg.getApi();
-        if (api != null) {
-            if (api.getHeaders() != null) {
-                for (Map.Entry<String, String> e : api.getHeaders().entrySet()) {
-                    emitSetHeaderYaml(sb, ids, e.getKey(), e.getValue(), true);
-                }
+        return sb.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void emitNodeXml(StringBuilder sb, IdGen ids, FlowNode n) {
+        Map<String, Object> data = n.getData() == null ? Map.of() : n.getData();
+        String label = (String) data.getOrDefault("label", n.getId());
+        String type = n.getType();
+
+        switch (type) {
+            case "REST_CALL" -> {
+                String method = String.valueOf(data.getOrDefault("method", "GET"));
+                String url = String.valueOf(data.getOrDefault("url", ""));
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"").append(xmlEscape(label)).append("\"/>\n");
+                sb.append("        <setHeader id=\"").append(ids.next("setHeader"))
+                  .append("\" name=\"CamelHttpMethod\">\n            <constant>").append(xmlEscape(method))
+                  .append("</constant>\n        </setHeader>\n");
+                sb.append("        <toD id=\"").append(ids.next("toD"))
+                  .append("\" uri=\"").append(xmlEscape(url)).append("\"/>\n");
             }
-            if (api.getBody() != null && !valueToString(api.getBody()).isBlank()) {
-                String body = valueToString(api.getBody());
-                sb.append("        - setBody:\n");
-                sb.append("            id: ").append(ids.next("setBody")).append('\n');
-                sb.append("            ").append(exprTag(body)).append(": ")
-                  .append(yamlString(body)).append('\n');
+            case "EXTRACT" -> {
+                String code = (String) data.getOrDefault("code", "");
+                String oneLine = code.replaceAll("\\s+", " ").trim();
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"EXTRACT: ").append(xmlEscape(oneLine)).append("\"/>\n");
             }
-            if (api.getUrl() != null && !api.getUrl().isBlank()) {
-                String method = api.getMethod() == null ? "GET" : api.getMethod();
+            case "TRANSFORM" -> {
+                String mode = String.valueOf(data.getOrDefault("mode", "mapping"));
+                String descriptor = "plugin".equals(mode)
+                        ? "plugin: " + extractPluginId(data)
+                        : "mapping: " + ((String) data.getOrDefault("code", "")).replaceAll("\\s+", " ").trim();
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"TRANSFORM ").append(xmlEscape(descriptor)).append("\"/>\n");
+                sb.append("        <to id=\"").append(ids.next("to"))
+                  .append("\" uri=\"bean:transformRunner\"/>\n");
+            }
+            case "PLUGIN_CALL" -> {
+                String pc = String.valueOf(data.getOrDefault("pluginCode", "<unset>"));
+                String ec = String.valueOf(data.getOrDefault("extensionCode", "<unset>"));
+                String ok = String.valueOf(data.getOrDefault("outputKey", "<unset>"));
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"PLUGIN_CALL ").append(xmlEscape(pc + ":" + ec + " → output." + ok)).append("\"/>\n");
+                sb.append("        <to id=\"").append(ids.next("to"))
+                  .append("\" uri=\"bean:pluginCallRunner\"/>\n");
+            }
+            case "DB_QUERY" -> {
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"DB ").append(xmlEscape(buildDbDescriptor(data))).append("\"/>\n");
+                sb.append("        <to id=\"").append(ids.next("to"))
+                  .append("\" uri=\"bean:dbQueryRunner\"/>\n");
+            }
+            case "RESPONSE" -> {
+                Object tmpl = data.get("template");
+                int n_keys = tmpl instanceof Map<?, ?> m ? m.size() : 0;
+                sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"RESPONSE (").append(n_keys).append(" keys)\"/>\n");
+                sb.append("        <to id=\"").append(ids.next("to"))
+                  .append("\" uri=\"bean:responseTemplateResolver\"/>\n");
+            }
+            default -> sb.append("        <log id=\"").append(ids.next("log"))
+                  .append("\" message=\"unknown node type: ").append(xmlEscape(type)).append("\"/>\n");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void emitNodeYaml(StringBuilder sb, IdGen ids, FlowNode n) {
+        Map<String, Object> data = n.getData() == null ? Map.of() : n.getData();
+        String label = (String) data.getOrDefault("label", n.getId());
+        String type = n.getType();
+
+        switch (type) {
+            case "REST_CALL" -> {
+                String method = String.valueOf(data.getOrDefault("method", "GET"));
+                String url = String.valueOf(data.getOrDefault("url", ""));
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString(label)).append('\n');
                 sb.append("        - setHeader:\n");
                 sb.append("            id: ").append(ids.next("setHeader")).append('\n');
                 sb.append("            name: CamelHttpMethod\n");
                 sb.append("            constant: ").append(yamlString(method)).append('\n');
                 sb.append("        - toD:\n");
                 sb.append("            id: ").append(ids.next("toD")).append('\n');
-                sb.append("            uri: ").append(yamlString(api.getUrl())).append('\n');
+                sb.append("            uri: ").append(yamlString(url)).append('\n');
+            }
+            case "EXTRACT" -> {
+                String code = (String) data.getOrDefault("code", "");
+                String oneLine = code.replaceAll("\\s+", " ").trim();
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("EXTRACT: " + oneLine)).append('\n');
+            }
+            case "TRANSFORM" -> {
+                String mode = String.valueOf(data.getOrDefault("mode", "mapping"));
+                String descriptor = "plugin".equals(mode)
+                        ? "plugin: " + extractPluginId(data)
+                        : "mapping: " + ((String) data.getOrDefault("code", "")).replaceAll("\\s+", " ").trim();
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("TRANSFORM " + descriptor)).append('\n');
+                sb.append("        - to:\n");
+                sb.append("            id: ").append(ids.next("to")).append('\n');
+                sb.append("            uri: bean:transformRunner\n");
+            }
+            case "PLUGIN_CALL" -> {
+                String pc = String.valueOf(data.getOrDefault("pluginCode", "<unset>"));
+                String ec = String.valueOf(data.getOrDefault("extensionCode", "<unset>"));
+                String ok = String.valueOf(data.getOrDefault("outputKey", "<unset>"));
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("PLUGIN_CALL " + pc + ":" + ec + " → output." + ok)).append('\n');
+                sb.append("        - to:\n");
+                sb.append("            id: ").append(ids.next("to")).append('\n');
+                sb.append("            uri: bean:pluginCallRunner\n");
+            }
+            case "DB_QUERY" -> {
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("DB " + buildDbDescriptor(data))).append('\n');
+                sb.append("        - to:\n");
+                sb.append("            id: ").append(ids.next("to")).append('\n');
+                sb.append("            uri: bean:dbQueryRunner\n");
+            }
+            case "RESPONSE" -> {
+                Object tmpl = data.get("template");
+                int n_keys = tmpl instanceof Map<?, ?> m ? m.size() : 0;
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("RESPONSE (" + n_keys + " keys)")).append('\n');
+                sb.append("        - to:\n");
+                sb.append("            id: ").append(ids.next("to")).append('\n');
+                sb.append("            uri: bean:responseTemplateResolver\n");
+            }
+            default -> {
+                sb.append("        - log:\n");
+                sb.append("            id: ").append(ids.next("log")).append('\n');
+                sb.append("            message: ").append(yamlString("unknown: " + type)).append('\n');
             }
         }
+    }
 
-        if (cfg.getExtract() != null) {
-            for (Map.Entry<String, String> e : cfg.getExtract().entrySet()) {
-                sb.append("        - setProperty:\n");
-                sb.append("            id: ").append(ids.next("setProperty")).append('\n');
-                sb.append("            name: extracted.").append(e.getKey()).append('\n');
-                sb.append("            jsonpath:\n");
-                sb.append("              expression: ").append(yamlString(e.getValue())).append('\n');
-            }
+    private String extractPluginId(Map<String, Object> data) {
+        Object p = data.get("plugin");
+        if (p instanceof Map<?, ?> m) {
+            Object id = m.get("id");
+            if (id instanceof String s && !s.isBlank()) return s;
         }
+        return "<unset>";
+    }
 
-        DbQueryConfig db = cfg.getDbQuery();
-        if (db != null && db.getEntity() != null && !db.getEntity().isBlank()) {
-            sb.append("        - log:\n");
-            sb.append("            id: ").append(ids.next("log")).append('\n');
-            sb.append("            message: ")
-              .append(yamlString("DB query " + buildDbDescriptor(db))).append('\n');
-            sb.append("        - to:\n");
-            sb.append("            id: ").append(ids.next("to")).append('\n');
-            sb.append("            uri: bean:dynamicDbQueryProcessor\n");
+    private String buildDbDescriptor(Map<String, Object> data) {
+        Object sql = data.get("sql");
+        if (sql instanceof String s && !s.isBlank()) {
+            return "RAW SQL: " + s.replaceAll("\\s+", " ").trim();
         }
-
-        if (cfg.getResponse() != null) {
-            sb.append("        - to:\n");
-            sb.append("            id: ").append(ids.next("to")).append('\n');
-            sb.append("            uri: bean:responseTemplateResolver\n");
-        }
-
-        return sb.toString();
-    }
-
-    private void emitSetHeaderXml(StringBuilder sb, IdGen ids,
-                                  String name, String value, boolean preferSimple) {
-        sb.append("        <setHeader id=\"").append(ids.next("setHeader"))
-          .append("\" name=\"").append(xmlEscape(name)).append("\">\n");
-        String tag = preferSimple ? exprTag(value) : "constant";
-        sb.append("            <").append(tag).append('>')
-          .append(xmlEscape(value == null ? "" : value))
-          .append("</").append(tag).append(">\n");
-        sb.append("        </setHeader>\n");
-    }
-
-    private void emitSetHeaderYaml(StringBuilder sb, IdGen ids,
-                                   String name, String value, boolean preferSimple) {
-        sb.append("        - setHeader:\n");
-        sb.append("            id: ").append(ids.next("setHeader")).append('\n');
-        sb.append("            name: ").append(yamlString(name)).append('\n');
-        String tag = preferSimple ? exprTag(value) : "constant";
-        sb.append("            ").append(tag).append(": ")
-          .append(yamlString(value == null ? "" : value)).append('\n');
-    }
-
-    private String exprTag(String value) {
-        return value != null && HAS_PLACEHOLDER.matcher(value).find() ? "simple" : "constant";
-    }
-
-    private String buildDbDescriptor(DbQueryConfig db) {
-        StringBuilder s = new StringBuilder(db.getEntity());
-        if (db.getFilters() != null && !db.getFilters().isEmpty()) {
+        StringBuilder s = new StringBuilder(String.valueOf(data.getOrDefault("entity", "")));
+        Object filters = data.get("filters");
+        if (filters instanceof List<?> list && !list.isEmpty()) {
             s.append(" WHERE ");
-            for (int i = 0; i < db.getFilters().size(); i++) {
-                QueryFilter f = db.getFilters().get(i);
+            for (int i = 0; i < list.size(); i++) {
                 if (i > 0) s.append(" AND ");
-                s.append(f.getField()).append(' ').append(f.getOp()).append(' ')
-                 .append(f.getValue() == null ? "?" : f.getValue());
+                Object f = list.get(i);
+                if (f instanceof Map<?, ?> fm) {
+                    s.append(fm.get("field")).append(' ').append(fm.get("op")).append(' ').append(fm.get("value"));
+                }
             }
         }
-        if (db.getOrderBy() != null && !db.getOrderBy().isBlank()) {
-            s.append(" ORDER BY ").append(db.getOrderBy());
-            if (db.getOrderDir() != null) s.append(' ').append(db.getOrderDir());
+        Object orderBy = data.get("orderBy");
+        if (orderBy instanceof String ob && !ob.isBlank()) {
+            s.append(" ORDER BY ").append(ob);
+            Object dir = data.get("orderDir");
+            if (dir != null) s.append(' ').append(dir);
         }
-        if (db.getLimit() != null) s.append(" LIMIT ").append(db.getLimit());
+        Object limit = data.get("limit");
+        if (limit != null) s.append(" LIMIT ").append(limit);
         return s.toString();
     }
 
-    private String valueToString(Object o) {
-        return o == null ? "" : o.toString();
+    private List<FlowNode> topoSort(ExecutionConfig cfg) {
+        List<FlowNode> nodes = cfg.getNodes() == null ? List.of() : cfg.getNodes();
+        if (nodes.isEmpty()) return nodes;
+        Map<String, FlowNode> byId = new LinkedHashMap<>();
+        for (FlowNode n : nodes) byId.put(n.getId(), n);
+        Map<String, List<String>> adj = new HashMap<>();
+        Map<String, Integer> indeg = new HashMap<>();
+        for (FlowNode n : nodes) { adj.put(n.getId(), new ArrayList<>()); indeg.put(n.getId(), 0); }
+        if (cfg.getEdges() != null) {
+            for (FlowEdge e : cfg.getEdges()) {
+                if (!byId.containsKey(e.getSource()) || !byId.containsKey(e.getTarget())) continue;
+                adj.get(e.getSource()).add(e.getTarget());
+                indeg.merge(e.getTarget(), 1, Integer::sum);
+            }
+        }
+        Deque<String> queue = new ArrayDeque<>();
+        for (FlowNode n : nodes) if (indeg.get(n.getId()) == 0) queue.add(n.getId());
+        List<FlowNode> sorted = new ArrayList<>(nodes.size());
+        while (!queue.isEmpty()) {
+            String id = queue.pollFirst();
+            sorted.add(byId.get(id));
+            for (String nx : adj.get(id)) {
+                if (indeg.merge(nx, -1, Integer::sum) == 0) queue.add(nx);
+            }
+        }
+        if (sorted.size() != nodes.size()) {
+            // Cycle — append remainder so preview still shows something
+            for (FlowNode n : nodes) if (!sorted.contains(n)) sorted.add(n);
+        }
+        return sorted;
     }
 
     private String xmlEscape(String s) {
         if (s == null) return "";
-        return s.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&apos;");
     }
 
     private String yamlString(String s) {
@@ -235,8 +272,6 @@ public class CamelDslEmitter {
 
     private static final class IdGen {
         private final AtomicInteger seq = new AtomicInteger(1);
-        String next(String prefix) {
-            return prefix + "-" + seq.getAndIncrement();
-        }
+        String next(String prefix) { return prefix + "-" + seq.getAndIncrement(); }
     }
 }

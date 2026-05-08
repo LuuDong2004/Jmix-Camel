@@ -1,0 +1,22 @@
+plugins {
+    id 'java-library'
+}
+
+group = 'com.vn.transform'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // PF4J ExtensionPoint marker — provided so plugin authors can compile against it,
+    // but NOT bundled into plugin JAR (host classpath provides it).
+    compileOnly 'org.pf4j:pf4j:3.12.0'
+    api 'org.slf4j:slf4j-api:2.0.13'
+}

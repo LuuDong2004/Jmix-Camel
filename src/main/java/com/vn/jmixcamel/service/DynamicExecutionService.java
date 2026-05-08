@@ -29,9 +29,8 @@ public class DynamicExecutionService {
 
     public Object execute(ExecutionConfig config) {
         configSecurityValidator.validate(config);
-        log.info("Executing dynamic config: api.url={}, dbQuery.entity={}",
-                config.getApi().getUrl(),
-                config.getDbQuery() == null ? null : config.getDbQuery().getEntity());
+        log.info("Executing flow with {} nodes",
+                config.getNodes() == null ? 0 : config.getNodes().size());
 
         return producerTemplate.send(DynamicExecutionRoute.URI, exchange -> {
             exchange.setPattern(ExchangePattern.InOut);

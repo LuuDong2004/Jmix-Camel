@@ -6,10 +6,12 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.vaadin.flow.component.ClickEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.editor.Editor;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
+import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.Binder;
 import com.vaadin.flow.router.Route;
@@ -34,6 +36,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 @Route(value = "dynamic-execute-view", layout = MainView.class)
 @ViewController(id = "DynamicExecuteView")
@@ -50,36 +53,46 @@ public class DynamicExecuteView extends StandardView {
                     .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES))
             .findAndRegisterModules();
 
-    @ViewComponent private VerticalLayout inputContainer;
-    @ViewComponent private VerticalLayout headersContainer;
-    @ViewComponent private VerticalLayout extractContainer;
-    @ViewComponent private VerticalLayout filtersContainer;
-    @ViewComponent private VerticalLayout responseContainer;
-
     @ViewComponent private JmixComboBox<String> apiMethodField;
     @ViewComponent private TypedTextField<String> apiUrlField;
-    @ViewComponent private JmixTextArea apiBodyField;
 
     @ViewComponent private JmixComboBox<String> dbEntityField;
     @ViewComponent private TypedTextField<String> dbOrderByField;
     @ViewComponent private JmixComboBox<String> dbOrderDirField;
     @ViewComponent private JmixIntegerField dbLimitField;
-    @ViewComponent private JmixTextArea sqlInputField;
 
     @ViewComponent private JmixTextArea previewArea;
     @ViewComponent private JmixTextArea resultArea;
+
+    @ViewComponent private JmixButton editInputBtn;
+    @ViewComponent private JmixButton editHeadersBtn;
+    @ViewComponent private JmixButton editBodyBtn;
+    @ViewComponent private JmixButton editExtractBtn;
+    @ViewComponent private JmixButton editFiltersBtn;
+    @ViewComponent private JmixButton editResponseBtn;
+    @ViewComponent private JmixButton openSqlBtn;
 
     private final List<KeyValue> inputItems = new ArrayList<>();
     private final List<KeyValue> headerItems = new ArrayList<>();
     private final List<KeyValue> extractItems = new ArrayList<>();
     private final List<QueryFilter> filterItems = new ArrayList<>();
     private final List<KeyValue> responseItems = new ArrayList<>();
+    private String apiBody = "";
+    private String sqlInput = "";
 
     private Grid<KeyValue> inputGrid;
     private Grid<KeyValue> headerGrid;
     private Grid<KeyValue> extractGrid;
     private Grid<QueryFilter> filterGrid;
     private Grid<KeyValue> responseGrid;
+
+    private Dialog inputDialog;
+    private Dialog headersDialog;
+    private Dialog bodyDialog;
+    private Dialog extractDialog;
+    private Dialog filtersDialog;
+    private Dialog responseDialog;
+    private Dialog sqlDialog;
 
     @Autowired private DynamicExecutionService dynamicExecutionService;
     @Autowired private QueryableEntityRegistry queryableEntityRegistry;
@@ -94,11 +107,25 @@ public class DynamicExecuteView extends StandardView {
         dbOrderDirField.setItems(ORDER_DIRS);
         dbEntityField.setItems(new ArrayList<>(queryableEntityRegistry.allEntities()));
 
-        inputGrid = mountKvGrid(inputContainer, inputItems, "Tên biến", "Giá trị");
-        headerGrid = mountKvGrid(headersContainer, headerItems, "Header name", "Header value");
-        extractGrid = mountKvGrid(extractContainer, extractItems, "Field", "JSONPath (vd: $.name)");
-        responseGrid = mountKvGrid(responseContainer, responseItems, "Key", "Expression (vd: ${extracted.name})");
-        filterGrid = mountFilterGrid();
+        inputDialog = buildKvDialog("Input variables", inputItems,
+                "Tên biến", "Giá trị", g -> inputGrid = g);
+        headersDialog = buildKvDialog("Request headers", headerItems,
+                "Header name", "Header value", g -> headerGrid = g);
+        extractDialog = buildKvDialog("Extract rules (JSONPath)", extractItems,
+                "Field", "JSONPath (vd: $.name)", g -> extractGrid = g);
+        responseDialog = buildKvDialog("Response template", responseItems,
+                "Key", "Expression (vd: ${extracted.name})", g -> responseGrid = g);
+        filtersDialog = buildFilterDialog();
+        bodyDialog = buildBodyDialog();
+        sqlDialog = buildSqlDialog();
+
+        editInputBtn.addClickListener(e -> inputDialog.open());
+        editHeadersBtn.addClickListener(e -> headersDialog.open());
+        editBodyBtn.addClickListener(e -> bodyDialog.open());
+        editExtractBtn.addClickListener(e -> extractDialog.open());
+        editFiltersBtn.addClickListener(e -> filtersDialog.open());
+        editResponseBtn.addClickListener(e -> responseDialog.open());
+        openSqlBtn.addClickListener(e -> sqlDialog.open());
 
         loadSample();
     }
@@ -111,43 +138,15 @@ public class DynamicExecuteView extends StandardView {
     @Subscribe(id = "resetBtn", subject = "clickListener")
     public void onReset(ClickEvent<JmixButton> e) {
         clearForm();
-        sqlInputField.clear();
+        sqlInput = "";
         previewArea.setValue("");
         resultArea.setValue("");
-    }
-
-    @Subscribe(id = "parseSqlBtn", subject = "clickListener")
-    public void onParseSql(ClickEvent<JmixButton> e) {
-        String sql = sqlInputField.getValue();
-        if (sql == null || sql.isBlank()) {
-            resultArea.setValue("Nhập câu SELECT vào ô SQL trước.");
-            return;
-        }
-        try {
-            DbQueryConfig parsed = sqlQueryParser.parse(sql);
-            applyParsedQuery(parsed);
-            resultArea.setValue("Đã parse SQL → form.");
-        } catch (Exception ex) {
-            resultArea.setValue("Lỗi parse SQL: " + rootMessage(ex));
-        }
-    }
-
-    private void applyParsedQuery(DbQueryConfig parsed) {
-        dbEntityField.setValue(parsed.getEntity());
-        dbOrderByField.setValue(parsed.getOrderBy() == null ? "" : parsed.getOrderBy());
-        dbOrderDirField.setValue(parsed.getOrderDir() == null ? "ASC" : parsed.getOrderDir());
-        dbLimitField.setValue(parsed.getLimit());
-
-        filterItems.clear();
-        if (parsed.getFilters() != null) {
-            filterItems.addAll(parsed.getFilters());
-        }
-        if (filterGrid != null) filterGrid.getDataProvider().refreshAll();
     }
 
     @Subscribe(id = "previewYamlBtn", subject = "clickListener")
     public void onPreviewYaml(ClickEvent<JmixButton> e) {
         try {
+            commitGridEditors();
             previewArea.setValue(camelDslEmitter.toYaml(buildConfig()));
         } catch (Exception ex) {
             previewArea.setValue("Error: " + rootMessage(ex));
@@ -157,6 +156,7 @@ public class DynamicExecuteView extends StandardView {
     @Subscribe(id = "previewXmlBtn", subject = "clickListener")
     public void onPreviewXml(ClickEvent<JmixButton> e) {
         try {
+            commitGridEditors();
             previewArea.setValue(camelDslEmitter.toXml(buildConfig()));
         } catch (Exception ex) {
             previewArea.setValue("Error: " + rootMessage(ex));
@@ -185,8 +185,7 @@ public class DynamicExecuteView extends StandardView {
         api.setUrl(apiUrlField.getValue());
         Map<String, Object> headers = toMap(headerItems, false);
         api.setHeaders(headers.isEmpty() ? null : toStringMap(headers));
-        String body = apiBodyField.getValue();
-        api.setBody(body == null || body.isBlank() ? null : body);
+        api.setBody(apiBody == null || apiBody.isBlank() ? null : apiBody);
         cfg.setApi(api);
 
         Map<String, Object> extractMap = toMap(extractItems, false);
@@ -244,10 +243,10 @@ public class DynamicExecuteView extends StandardView {
         responseItems.add(new KeyValue("apiUser", "${extracted}"));
         responseItems.add(new KeyValue("customerDb", "${dbResult}"));
 
-        sqlInputField.setValue(
-                "SELECT * FROM customer WHERE phone = '${extracted.phone}' ORDER BY name ASC LIMIT 1");
+        sqlInput = "SELECT * FROM customer WHERE phone = '${extracted.phone}' ORDER BY name ASC LIMIT 1";
 
         refreshAllGrids();
+        refreshSummaries();
     }
 
     private void clearForm() {
@@ -258,12 +257,13 @@ public class DynamicExecuteView extends StandardView {
         responseItems.clear();
         apiMethodField.setValue("GET");
         apiUrlField.clear();
-        apiBodyField.clear();
+        apiBody = "";
         dbEntityField.clear();
         dbOrderByField.clear();
         dbOrderDirField.clear();
         dbLimitField.clear();
         refreshAllGrids();
+        refreshSummaries();
     }
 
     private void refreshAllGrids() {
@@ -280,6 +280,172 @@ public class DynamicExecuteView extends StandardView {
         if (extractGrid != null && extractGrid.getEditor().isOpen()) extractGrid.getEditor().closeEditor();
         if (filterGrid != null && filterGrid.getEditor().isOpen()) filterGrid.getEditor().closeEditor();
         if (responseGrid != null && responseGrid.getEditor().isOpen()) responseGrid.getEditor().closeEditor();
+    }
+
+    private void refreshSummaries() {
+        editInputBtn.setText(label("Input variables", inputItems.size()));
+        editHeadersBtn.setText(label("Headers", headerItems.size()));
+        editExtractBtn.setText(label("Extract", extractItems.size()));
+        editFiltersBtn.setText(label("Filters", filterItems.size()));
+        editResponseBtn.setText(label("Response template", responseItems.size()));
+        boolean hasBody = apiBody != null && !apiBody.isBlank();
+        editBodyBtn.setText(hasBody ? "Body (đã cấu hình)" : "Body (trống)");
+    }
+
+    private String label(String name, int count) {
+        return name + " (" + count + ")";
+    }
+
+    private Dialog buildKvDialog(String title, List<KeyValue> items,
+                                  String keyHeader, String valueHeader,
+                                  Consumer<Grid<KeyValue>> gridSetter) {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle(title);
+        dialog.setWidth("720px");
+        dialog.setMaxWidth("90vw");
+        dialog.setMaxHeight("80vh");
+
+        VerticalLayout content = new VerticalLayout();
+        content.setSpacing(true);
+        content.setPadding(false);
+        content.setWidthFull();
+
+        Grid<KeyValue> grid = mountKvGrid(content, items, keyHeader, valueHeader);
+        gridSetter.accept(grid);
+
+        dialog.add(content);
+
+        Button closeBtn = new Button("Đóng", e -> dialog.close());
+        closeBtn.addThemeName("primary");
+        dialog.getFooter().add(closeBtn);
+
+        dialog.addOpenedChangeListener(e -> {
+            if (!e.isOpened()) {
+                refreshSummaries();
+            }
+        });
+
+        return dialog;
+    }
+
+    private Dialog buildFilterDialog() {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("DB query filters");
+        dialog.setWidth("720px");
+        dialog.setMaxWidth("90vw");
+        dialog.setMaxHeight("80vh");
+
+        VerticalLayout content = new VerticalLayout();
+        content.setSpacing(true);
+        content.setPadding(false);
+        content.setWidthFull();
+
+        filterGrid = mountFilterGrid(content);
+
+        dialog.add(content);
+
+        Button closeBtn = new Button("Đóng", e -> dialog.close());
+        closeBtn.addThemeName("primary");
+        dialog.getFooter().add(closeBtn);
+
+        dialog.addOpenedChangeListener(e -> {
+            if (!e.isOpened()) {
+                refreshSummaries();
+            }
+        });
+
+        return dialog;
+    }
+
+    private Dialog buildBodyDialog() {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("Request body (JSON cho POST/PUT/PATCH)");
+        dialog.setWidth("720px");
+        dialog.setHeight("520px");
+        dialog.setMaxWidth("90vw");
+
+        TextArea bodyArea = new TextArea();
+        bodyArea.setWidthFull();
+        bodyArea.setHeight("100%");
+        bodyArea.setPlaceholder("{\n  \"key\": \"value\"\n}");
+
+        dialog.add(bodyArea);
+
+        dialog.addOpenedChangeListener(e -> {
+            if (e.isOpened()) {
+                bodyArea.setValue(apiBody == null ? "" : apiBody);
+            } else {
+                refreshSummaries();
+            }
+        });
+
+        Button cancelBtn = new Button("Huỷ", e -> dialog.close());
+        Button saveBtn = new Button("Lưu", e -> {
+            apiBody = bodyArea.getValue();
+            dialog.close();
+        });
+        saveBtn.addThemeName("primary");
+        dialog.getFooter().add(cancelBtn, saveBtn);
+
+        return dialog;
+    }
+
+    private Dialog buildSqlDialog() {
+        Dialog dialog = new Dialog();
+        dialog.setHeaderTitle("SQL quick parser");
+        dialog.setWidth("720px");
+        dialog.setHeight("440px");
+        dialog.setMaxWidth("90vw");
+
+        TextArea sqlArea = new TextArea();
+        sqlArea.setLabel("Paste SELECT để tự fill form");
+        sqlArea.setWidthFull();
+        sqlArea.setHeight("100%");
+        sqlArea.setPlaceholder("SELECT * FROM customer WHERE phone = '${extracted.phone}' ORDER BY name ASC LIMIT 1");
+
+        dialog.add(sqlArea);
+
+        dialog.addOpenedChangeListener(e -> {
+            if (e.isOpened()) {
+                sqlArea.setValue(sqlInput == null ? "" : sqlInput);
+            }
+        });
+
+        Button cancelBtn = new Button("Đóng", e -> dialog.close());
+        Button parseBtn = new Button("Parse → Form", ev -> {
+            String sql = sqlArea.getValue();
+            sqlInput = sql;
+            if (sql == null || sql.isBlank()) {
+                resultArea.setValue("Nhập câu SELECT vào ô SQL trước.");
+                return;
+            }
+            try {
+                DbQueryConfig parsed = sqlQueryParser.parse(sql);
+                applyParsedQuery(parsed);
+                resultArea.setValue("Đã parse SQL → form.");
+                dialog.close();
+            } catch (Exception ex) {
+                resultArea.setValue("Lỗi parse SQL: " + rootMessage(ex));
+            }
+        });
+        parseBtn.addThemeName("primary");
+        dialog.getFooter().add(cancelBtn, parseBtn);
+
+        return dialog;
+    }
+
+    private void applyParsedQuery(DbQueryConfig parsed) {
+        dbEntityField.setValue(parsed.getEntity());
+        dbOrderByField.setValue(parsed.getOrderBy() == null ? "" : parsed.getOrderBy());
+        dbOrderDirField.setValue(parsed.getOrderDir() == null ? "ASC" : parsed.getOrderDir());
+        dbLimitField.setValue(parsed.getLimit());
+
+        filterItems.clear();
+        if (parsed.getFilters() != null) {
+            filterItems.addAll(parsed.getFilters());
+        }
+        if (filterGrid != null) filterGrid.getDataProvider().refreshAll();
+        refreshSummaries();
     }
 
     private Grid<KeyValue> mountKvGrid(VerticalLayout container, List<KeyValue> items,
@@ -308,6 +474,7 @@ public class DynamicExecuteView extends StandardView {
             Button del = new Button(VaadinIcon.TRASH.create(), e -> {
                 items.remove(item);
                 grid.getDataProvider().refreshAll();
+                refreshSummaries();
             });
             del.addThemeName("tertiary-inline");
             return del;
@@ -320,6 +487,7 @@ public class DynamicExecuteView extends StandardView {
             items.add(kv);
             grid.getDataProvider().refreshAll();
             editor.editItem(kv);
+            refreshSummaries();
         });
         addBtn.addThemeName("tertiary");
 
@@ -327,7 +495,7 @@ public class DynamicExecuteView extends StandardView {
         return grid;
     }
 
-    private Grid<QueryFilter> mountFilterGrid() {
+    private Grid<QueryFilter> mountFilterGrid(VerticalLayout container) {
         Grid<QueryFilter> grid = new Grid<>();
         grid.setItems(filterItems);
         grid.setAllRowsVisible(true);
@@ -363,6 +531,7 @@ public class DynamicExecuteView extends StandardView {
             Button del = new Button(VaadinIcon.TRASH.create(), e -> {
                 filterItems.remove(item);
                 grid.getDataProvider().refreshAll();
+                refreshSummaries();
             });
             del.addThemeName("tertiary-inline");
             return del;
@@ -376,10 +545,11 @@ public class DynamicExecuteView extends StandardView {
             filterItems.add(f);
             grid.getDataProvider().refreshAll();
             editor.editItem(f);
+            refreshSummaries();
         });
         addBtn.addThemeName("tertiary");
 
-        filtersContainer.add(grid, addBtn);
+        container.add(grid, addBtn);
         return grid;
     }
 
